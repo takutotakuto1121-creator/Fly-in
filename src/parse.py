@@ -1,12 +1,14 @@
-from enum import Enum
-from pydantic import BaseModel, Field, model_validator, ValidationError
 import sys
+from enum import Enum
+from pydantic import BaseModel, Field, ValidationError, model_validator
+
 
 class ZoneType(str, Enum):
     normal = "normal"
     blocked = "blocked"
     restricted = "restricted"
     priority = "priority"
+
 
 class Zone(BaseModel):
     name: str
@@ -16,14 +18,13 @@ class Zone(BaseModel):
     max_drones: int = Field(default=1, ge=1)
 
     @model_validator(mode="after")
-    def validate(self):
+    def validate_zone(self) -> "Zone":
         if "-" in self.name:
             raise ValueError(
-                "The connection syntax "
-                "forbids dashes in zone names"
-                )
-        else:
-            return self
+                "The connection syntax forbids dashes in zone names"
+            )
+        return self
+
 
 class Connection(BaseModel):
     zone1_name: str
@@ -31,17 +32,13 @@ class Connection(BaseModel):
     max_link_capacity: int = Field(default=1, ge=1)
 
     @model_validator(mode="after")
-    def validate(self):
-        if (
-            "-" in self.zone1_name
-            or "-" in self.zone2_name
-        ):
+    def validate_connection(self) -> "Connection":
+        if "-" in self.zone1_name or "-" in self.zone2_name:
             raise ValueError(
-                "The connection syntax "
-                "forbids dashes in zone names."
-                )
-        else:
-            return self
+                "The connection syntax forbids dashes in zone names."
+            )
+        return self
+
 
 class Map(BaseModel):
     nb_drones: int
@@ -49,6 +46,7 @@ class Map(BaseModel):
     end_hub: Zone
     hubs: list[Zone]
     connections: list[Connection]
+
 
 class Parser:
     def __init__(self) -> None:
@@ -63,7 +61,7 @@ class Parser:
         self.defined_zones: set[str] = set()
         self.defined_connections: set[frozenset[str]] = set()
 
-    def parse(self, filepath: str):
+    def parse(self, filepath: str) -> Map:
         try:
             with open(filepath) as f:
                 lines = f.readlines()
@@ -83,18 +81,20 @@ class Parser:
                     continue
                 elif line.startswith("nb_drones:"):
                     self._parse_nb_drones(line)
-                elif line.startswith(
-                    ("start_hub:", "end_hub:", "hub:")):
+                elif line.startswith(("start_hub:", "end_hub:", "hub:")):
                     self._parse_hub(line)
                 elif line.startswith("connection:"):
                     self._parse_connection(line)
                 else:
                     raise ValueError("Invalid line format")
             except (ValueError, ValidationError) as e:
-                print(f"[Error] error at {line_num} line: {e}", file=sys.stderr)
+                print(
+                    f"[Error] error at {line_num} line: {e}",
+                    file=sys.stderr
+                )
                 sys.exit(1)
 
-        if not (self.exist_start_hub and self.exist_end_hub):
+        if self.start_hub is None or self.end_hub is None:
             raise ValueError("you must implement start_hub and end_hub")
 
         return Map(
@@ -117,12 +117,15 @@ class Parser:
 
     def _parse_hub(self, line: str) -> None:
         if not self.exist_first_line:
-            raise ValueError("The first line defines the number of drones using nb_drones: <number>.")
+            raise ValueError(
+                "The first line defines the number of drones "
+                "using nb_drones: <number>."
+            )
 
         prefix, rest = line.split(":", 1)
         rest = rest.strip()
 
-        meta = []
+        meta: list[str] = []
         if "[" in rest and rest.endswith("]"):
             base, meta_str = rest.split("[", 1)
             rest = base.strip()
@@ -141,7 +144,7 @@ class Parser:
         color_exist = False
         max_drones_exist = False
 
-        hub_type = "normal"
+        hub_type = ZoneType.normal
         hub_color = "none"
         hub_max_drones = 1
 
@@ -151,7 +154,7 @@ class Parser:
                 raise ValueError("Invalid zone-metadata format")
             if data_parts[0] == "zone" and not zone_exist:
                 zone_exist = True
-                hub_type = data_parts[1]
+                hub_type = ZoneType(data_parts[1])
             elif data_parts[0] == "color" and not color_exist:
                 color_exist = True
                 hub_color = data_parts[1]
@@ -174,12 +177,16 @@ class Parser:
         prefix = prefix.strip()
         if prefix == "start_hub":
             if self.exist_start_hub:
-                raise ValueError("implementation of start_hub must be only 1 time")
+                raise ValueError(
+                    "implementation of start_hub must be only 1 time"
+                )
             self.start_hub = zone
             self.exist_start_hub = True
         elif prefix == "end_hub":
             if self.exist_end_hub:
-                raise ValueError("implementation of end_hub must be only 1 time")
+                raise ValueError(
+                    "implementation of end_hub must be only 1 time"
+                )
             self.end_hub = zone
             self.exist_end_hub = True
         elif prefix == "hub":
@@ -189,12 +196,15 @@ class Parser:
 
     def _parse_connection(self, line: str) -> None:
         if not self.exist_first_line:
-            raise ValueError("The first line defines the number of drones using nb_drones: <number>.")
+            raise ValueError(
+                "The first line defines the number of drones "
+                "using nb_drones: <number>."
+            )
 
         prefix, rest = line.split(":", 1)
         rest = rest.strip()
 
-        meta = []
+        meta: list[str] = []
         if "[" in rest and rest.endswith("]"):
             base, meta_str = rest.split("[", 1)
             rest = base.strip()
