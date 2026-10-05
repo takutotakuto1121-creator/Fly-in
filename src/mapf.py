@@ -55,7 +55,7 @@ class MAPF:
             max_link_capacity = connection.max_link_capacity
 
             if self.is_zonetype(zone2, "restricted"):
-                dummy = f"dummy_{zone1}_to_{zone2}"
+                dummy = f"{zone1}-{zone2}"
                 self.add_edge((zone1, "out", t), (dummy, "in", t + 1), max_link_capacity)
                 self.add_edge((dummy, "in", t + 1), (dummy, "out", t + 1), max_link_capacity)
                 if t > 0:
@@ -65,7 +65,7 @@ class MAPF:
                 self.add_edge((zone1, "out", t), (zone2, "in", t + 1), max_link_capacity)
 
             if self.is_zonetype(zone1, "restricted"):
-                dummy = f"dummy_{zone2}_to_{zone1}"
+                dummy = f"{zone2}-{zone1}"
                 self.add_edge((zone2, "out", t), (dummy, "in", t + 1), max_link_capacity)
                 self.add_edge((dummy, "in", t + 1), (dummy, "out", t + 1), max_link_capacity)
                 if t > 0:
@@ -89,21 +89,22 @@ class MAPF:
                     parent_edge[edge.to] = edge
                     queue.append(edge.to)
 
+        return None
+
     def extract_paths(self, t: int) -> list[list[str]]:
         paths = []
         for _ in range(self.map.nb_drones):
             current_node = (self.map.start_hub.name, "out", 0)
             drone_path = [self.map.start_hub.name]
 
-            while current_node[0] != self.map.end_hub.name or current_node[2] != t:
+            while current_node[0] != self.map.end_hub.name and current_node[2] != t:
                 for edge in self.graph.get(current_node, []):
                     if edge.rev.cap > 0 and edge.is_forward:
 
                         edge.rev.cap -= 1
                         next_node = edge.to
 
-                        if next_node[1] == "in" and next_node[0] != current_node[0]:
-                            if not next_node[0].startswith("dummy"):
+                        if next_node[2] > current_node[2]:
                                 drone_path.append(next_node[0])
 
                         current_node = next_node
@@ -150,3 +151,16 @@ class MAPF:
         paths = self.extract_paths(t)
         return (paths, t)
 
+    def print_logs(self, paths: list[list[str]], max_t: int) -> None:
+        for t in range(1, max_t + 1):
+            turn_move = []
+            for drone_id, path in enumerate(paths):
+                if t >= len(path):
+                    continue
+                prev_pos = path[t - 1]
+                curr_pos = path[t]
+                if curr_pos != prev_pos:
+                    turn_move.append(f"D{drone_id + 1}-{curr_pos}")
+
+            if turn_move:
+                print(" ".join(turn_move))
