@@ -54,13 +54,16 @@ class MAPF:
             zone2 = connection.zone2_name
             max_link_capacity = connection.max_link_capacity
 
+            if self.is_zonetype(zone1, "blocked") or self.is_zonetype(zone2, "blocked"):
+                return
+
             if self.is_zonetype(zone2, "restricted"):
                 dummy = f"{zone1}-{zone2}"
                 self.add_edge((zone1, "out", t), (dummy, "in", t + 1), max_link_capacity)
                 self.add_edge((dummy, "in", t + 1), (dummy, "out", t + 1), max_link_capacity)
                 if t > 0:
                     self.add_edge((dummy, "out", t), (zone2, "in", t + 1), max_link_capacity)
-            
+  
             else:
                 self.add_edge((zone1, "out", t), (zone2, "in", t + 1), max_link_capacity)
 
@@ -83,6 +86,12 @@ class MAPF:
 
             if current == end_node:
                 return parent_edge
+
+            for edge in self.graph.get(current, []):
+                if edge.cap > 0 and edge.to not in parent_edge and edge.to != start_node:
+                    if self.is_zonetype(edge.to, "priority"):
+                        parent_edge[edge.to] = edge
+                        queue.append(edge.to)
 
             for edge in self.graph.get(current, []):
                 if edge.cap > 0 and edge.to not in parent_edge and edge.to != start_node:
