@@ -63,7 +63,11 @@ mapf(multi agent find path)
 個別のドローンには着目しない
 水を流しまくって最後にidを一から順番に振っていく
 
-## MAPF
+## pygame
+### R
+
+
+zone1_out -> dummy_in -> dummy_out -> zone2_out 
 
 
 

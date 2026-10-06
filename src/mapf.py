@@ -55,7 +55,7 @@ class MAPF:
             max_link_capacity = connection.max_link_capacity
 
             if self.is_zonetype(zone1, "blocked") or self.is_zonetype(zone2, "blocked"):
-                return
+                continue
 
             if self.is_zonetype(zone2, "restricted"):
                 dummy = f"{zone1}-{zone2}"

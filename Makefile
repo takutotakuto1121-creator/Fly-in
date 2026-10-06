@@ -18,8 +18,11 @@ $(VENV):
 install: $(VENV)
 	$(PIP) install -r requirements.txt
 
+log: install
+	$(PYTHON) -m src --log
+
 run: install
-	$(PYTHON) -m src
+	$(PYTHON) -m src --visual
 
 debug: install
 	$(PYTHON) -m pdb src
