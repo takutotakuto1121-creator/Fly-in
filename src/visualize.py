@@ -3,18 +3,42 @@ from src import Map, Zone, Parser, Connection, MAPF
 
 
 class Visualizer:
-    def __init__(self, map: Map, paths: list[list[tuple[int, int]]], max_turn: int) -> None:
-        self.map = map
-        self.max_turn = max_turn
+    def __init__(self) -> None:
+        # マップデータ関連の初期化
+        self.map = None
+        self.paths = []
+        self.max_turn = 0
+        
+        # 描画関連の初期化
         self.tab_size: tuple[int, int] = (1280, 80)
         self.screen_size: tuple[int, int] = (1280, 720)
+        self.unit_x = 0.0
+        self.unit_y = 0.0
+        self.circle_radius = 0.0
+        
+        # アプリケーションの状態管理
+        self.running = True
+        self.state = "home"
+        self.turn_count = 0
+        self.index = 0
+
+    def load_map(self, difficulty: str, filename: str) -> None:
+        # 選択された難易度とファイル名からマップをロード
+        filepath = f"maps/{difficulty}/{filename}"
+        parser = Parser()
+        self.map = parser.parse(filepath)
+        mapf = MAPF(self.map)
+        paths, max_turn = mapf.find_path()
+        
+        self.max_turn = max_turn
+        
+        # 座標やパスを画面用に再計算
         self.redefine_coordinates_and_get_unit()
         self.paths = self.redefine_paths(paths)
         self.circle_radius = self.define_circle_radius()
-        self.running = True
-        self.state = "map"
+        
         self.turn_count = 0
-        self.index = 0
+        self.state = "map"
 
     def redefine_coordinates_and_get_unit(self) -> None:
         x_screen, y_screen = self.screen_size
@@ -39,15 +63,23 @@ class Visualizer:
             new_y = (orig_y - y_min + 1) * self.unit_y
             hub.coordinate = (new_x, new_y)
 
-    def redefine_paths(self, paths: list[list[str]]) -> list[list[tuple[int, int]]]:
+    def redefine_paths(self, paths: list[list[str]]) -> list[list[tuple[float, float]]]:
         hubs = [self.map.start_hub, self.map.end_hub] + self.map.hubs
         hub_coords = {hub.name: hub.coordinate for hub in hubs}
         
-        new_paths: list[list[tuple[int, int]]] = []
+        new_paths: list[list[tuple[float, float]]] = []
         for path in paths:
-            new_path: list[tuple[int, int]] = []
+            new_path: list[tuple[float, float]] = []
             for hub in path:
-                new_path.append(hub_coords[hub])
+                if hub in hub_coords:
+                    new_path.append(hub_coords[hub])
+                elif "-" in hub:
+                    zone1, zone2 = hub.split("-", 1)
+                    if zone1 in hub_coords and zone2 in hub_coords:
+                        coord1 = hub_coords[zone1]
+                        coord2 = hub_coords[zone2]
+                        midpoint = ((coord1[0] + coord2[0]) / 2, (coord1[1] + coord2[1]) / 2)
+                        new_path.append(midpoint)
             new_paths.append(new_path)
         return new_paths
 
@@ -58,15 +90,16 @@ class Visualizer:
 
     def draw_text_in_circle(self, hub, screen) -> None:
         length = max(1, len(hub.name))
-        font_size = self.circle_radius / (length * 0.17)
+        font_size = max(10, int(self.circle_radius / (length * 0.17)))
         x_text = hub.coordinate[0] - self.circle_radius
         y_text = hub.coordinate[1] + self.circle_radius
-        font = pygame.font.Font(None, int(font_size))
+        font = pygame.font.Font(None, font_size)
         text = font.render(hub.name, True, "black")
-        screen.blit(text, (x_text, y_text))
+        screen.blit(text, (int(x_text), int(y_text)))
 
     def get_zone_coordinate(self, connection: Connection) -> tuple[tuple[float, float], tuple[float, float]]:
         hubs = [self.map.start_hub, self.map.end_hub] + self.map.hubs
+        result_1, result_2 = (0.0, 0.0), (0.0, 0.0)
         for hub in hubs:
             if connection.zone1_name == hub.name:
                 result_1 = hub.coordinate
@@ -75,40 +108,44 @@ class Visualizer:
         return (result_1, result_2)
 
     def draw_lines(self, screen) -> None:
-        # pygame.draw.line(screen, "gray", (pos: tuple), (pos), hutosa)
         for connection in self.map.connections:
             pos_1, pos_2 = self.get_zone_coordinate(connection)
-            thickness = self.unit_x * 0.1 * connection.max_link_capacity
-            thickness = max(1, int(thickness))
-            pygame.draw.line(screen, "gray", pos_1, pos_2, thickness)
+            thickness = max(1, int(self.unit_x * 0.1 * connection.max_link_capacity))
+            pygame.draw.line(screen, "gray", (int(pos_1[0]), int(pos_1[1])), (int(pos_2[0]), int(pos_2[1])), thickness)
 
     def draw_circles(self, screen) -> None:
         hubs = [self.map.start_hub, self.map.end_hub] + self.map.hubs
-
         self.draw_lines(screen)
-
         for hub in hubs:
-            pygame.draw.circle(screen, hub.color, hub.coordinate, self.circle_radius)
+            center = (int(hub.coordinate[0]), int(hub.coordinate[1]))
+            radius = int(self.circle_radius)
+            if hub.color == "rainbow":
+                pygame.draw.circle(screen, "red", center, radius)
+                pygame.draw.circle(screen, "yellow", center, int(radius / 2))
+                pygame.draw.circle(screen, "blue", center, int(radius / 3))
+            else:
+                pygame.draw.circle(screen, hub.color, center, radius)
             self.draw_text_in_circle(hub, screen)
 
-    def draw_drone(self, screen, pos: tuple[int, int], num: int) -> None:
-        x, y = pos
-        org_x, org_y = x, y
-        width = self.unit_x * 0.5
-        height = self.unit_y * 0.2
-        x -= width // 2
-        y -= height // 2
-        pygame.draw.ellipse(screen, "white", (x, y, width, height))
-        pygame.draw.ellipse(screen, "black", (x, y, width, height), 3)
+    def draw_drone(self, screen, pos: tuple[float, float], num: int) -> None:
+        org_x, org_y = pos
+        width = max(2, int(self.unit_x * 0.5))
+        height = max(2, int(self.unit_y * 0.2))
+        x = int(org_x - width / 2)
+        y = int(org_y - height / 2)
+        
+        rect = (x, y, width, height)
+        pygame.draw.ellipse(screen, "white", rect)
+        pygame.draw.ellipse(screen, "black", rect, 1)
 
-        font_size = height
-        font = pygame.font.Font(None, int(font_size))
+        font_size = max(10, height)
+        font = pygame.font.Font(None, font_size)
         text = font.render(f"{num}", True, "black")
-        text_rect = text.get_rect(center=(org_x, org_y))
+        text_rect = text.get_rect(center=(int(org_x), int(org_y)))
         screen.blit(text, text_rect)
 
     def draw_drones(self, screen, turn_count: int) -> None:
-        coordinates: dict[tuple[int, int], int] = {}
+        coordinates: dict[tuple[float, float], int] = {}
         for path in self.paths:
             if not path:
                 continue
@@ -120,8 +157,8 @@ class Visualizer:
 
     def draw_tabs(self, screen) -> None:
         pygame.draw.rect(screen, "gray", (0, self.screen_size[1], self.tab_size[0], self.tab_size[1]))
-        font_size = self.tab_size[1] / 2
-        font = pygame.font.Font(None, int(font_size))
+        font_size = int(self.tab_size[1] / 2)
+        font = pygame.font.Font(None, font_size)
         text1 = font.render("<- / ->: Slow down / Advance time", True, "black")
         text2 = font.render("esc: Return to the home screen", True, "black")
         screen.blit(text1, (0, self.screen_size[1]))
@@ -135,10 +172,11 @@ class Visualizer:
                 self.turn_count = max(0, self.turn_count - 1)
             elif event.key == pygame.K_ESCAPE:
                 self.state = "home"
+                self.index = 0
 
     def draw_home_texts(self, screen, candidates) -> None:
         center_x = self.screen_size[0] / 2
-        font_size = self.unit_y * 0.9
+        font_size = self.screen_size[1] * 0.2
         font = pygame.font.Font(None, int(font_size))
 
         title = font.render("Fly-in", True, "blue")
@@ -151,13 +189,14 @@ class Visualizer:
             screen.blit(text, text_rect)
 
     def draw_selections(self, screen) -> None:
-        font_size = self.unit_y * 0.9
-        pygame.draw.rect(screen, "gray", (0, font_size * (self.index + 1), self.screen_size[0], font_size))
+        font_size = self.screen_size[1] * 0.2
+        rect = (0, int(font_size) * (self.index + 1), self.screen_size[0], font_size)
+        pygame.draw.rect(screen, "gray", rect)
 
     def draw_home_tab(self, screen) -> None:
         pygame.draw.rect(screen, "gray", (0, self.screen_size[1], self.tab_size[0], self.tab_size[1]))
-        font_size = self.tab_size[1] / 2
-        font = pygame.font.Font(None, int(font_size))
+        font_size = int(self.tab_size[1] / 2)
+        font = pygame.font.Font(None, font_size)
         text1 = font.render("<- / -> : Change selection", True, "black")
         text2 = font.render("Enter: Select the map", True, "black")
         screen.blit(text1, (0, self.screen_size[1]))
@@ -183,10 +222,10 @@ class Visualizer:
             self.draw_home_tab(screen)
             
         elif self.state == "map":
-            screen.fill("white")
-            self.draw_circles(screen)
-            self.draw_drones(screen, self.turn_count)
-            self.draw_tabs(screen)
+            if self.map:
+                self.draw_circles(screen)
+                self.draw_drones(screen, self.turn_count)
+                self.draw_tabs(screen)
             
         pygame.display.flip()
 
@@ -194,11 +233,15 @@ class Visualizer:
         length = len(candidates)
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RIGHT, pygame.K_DOWN):
-                self.index = min(length, self.index + 1)
+                self.index = min(length - 1, self.index + 1)
             elif event.key in (pygame.K_LEFT, pygame.K_UP):
                 self.index = max(0, self.index - 1)
             elif event.key == pygame.K_RETURN:
-                self.state = candidates[self.index]
+                selected = candidates[self.index]
+                if selected.endswith(".txt"):
+                    self.load_map(self.state, selected)
+                else:
+                    self.state = selected
                 self.index = 0
             elif event.key == pygame.K_ESCAPE:
                 if self.state == "home":
@@ -224,7 +267,7 @@ class Visualizer:
                 candidates = ["01_the_impossible_dream.txt"] 
             self.get_home_event(event, candidates)
 
-        if self.state == "map":
+        elif self.state == "map":
             self.get_map_event(event)
 
     def visualize(self) -> None:
@@ -245,9 +288,5 @@ class Visualizer:
 
 
 if __name__ == "__main__":
-    parser = Parser()
-    map = parser.parse("maps/hard/03_ultimate_challenge.txt")
-    mapf = MAPF(map)
-    paths, t = mapf.find_path()
-    visualizer = Visualizer(map, paths, t)
+    visualizer = Visualizer()
     visualizer.visualize()

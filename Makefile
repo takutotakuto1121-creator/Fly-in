@@ -8,7 +8,8 @@ FLAGS 	= --warn-return-any\
 		  --warn-unused-ignores\
 		  --ignore-missing-imports\
 		  --disallow-untyped-defs\
-		  --check-untyped-defs\
+		  --check-untyped-defs
+ARG		?= maps/hard/03_ultimate_challenge.txt
 
 .PHONY: install run debug lint lint-strict
 
@@ -19,10 +20,10 @@ install: $(VENV)
 	$(PIP) install -r requirements.txt
 
 log: install
-	$(PYTHON) -m src --log
+	$(PYTHON) -m src --log $(ARG)
 
 run: install
-	$(PYTHON) -m src --visual
+	$(PYTHON) -m src
 
 debug: install
 	$(PYTHON) -m pdb src

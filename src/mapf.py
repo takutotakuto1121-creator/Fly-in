@@ -114,7 +114,7 @@ class MAPF:
                         next_node = edge.to
 
                         if next_node[2] > current_node[2]:
-                                drone_path.append(next_node[0])
+                            drone_path.append(next_node[0])
 
                         current_node = next_node
                         break

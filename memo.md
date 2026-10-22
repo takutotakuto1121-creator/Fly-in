@@ -64,11 +64,15 @@ mapf(multi agent find path)
 水を流しまくって最後にidを一から順番に振っていく
 
 ## pygame
-### R
 
 
 zone1_out -> dummy_in -> dummy_out -> zone2_out 
 
+
+mapに依存しすぎ
+→分割むずい
+
+適当に修正orホームとマップを別ウィンドウにする
 
 
 
