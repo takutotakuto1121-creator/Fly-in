@@ -75,6 +75,65 @@ mapに依存しすぎ
 適当に修正orホームとマップを別ウィンドウにする
 
 
+## A*の全探索
+## CBS
+priority-queueでメイクスパンがい使い順に常に並び替え続ければメイクスパンの最短が保証される
+## LaCAM*
+PIBT
+
+DFS, BFS, tree
+dijkstra, A*
+TSP, maximun water flow, min cost flow
+mapf
+cbs, time-expanded frahph
+
+基本: CBS
+最先端SOTA: LaCAM/LaCAM*
+Unlabeled: Time-Expanded Network Flow
+実務・連続空間: Priority Planning/PIBT/ORCA
+
+# MAPF(Multi Agent Path Finding)
+## 前提
+DFS, BFS, dijkstra, A*などのアルゴリズムの習得は前提条件とする。
+
+## 概観
+グラフ$G=(V, E)$, エージェントのグループ$A = \{1, 2, \dots , n\}$, エージェント$i$のスタート地点を$s_i\in V$, ゴール地点を$g_i\in V$, 経路$\pi_i = (\pi_i[0], \pi_i[1], \dots)$とする。
+
+この時、アルゴリズムの評価指標は以下の２つ。
+1. $\sum_{i\in A}cost(\pi_i)$
+2. $\max_{i\in A}cost(\pi_i)$
+
+MAPFは計算量が莫大なため、エージェントが増えるにつれて、最短の経路探索を行うとすると難しくなる。
+
+よって、コストと探索時間を考慮した様々なアルゴリズムが研究されている。
+
+今回は$\max_{i\in A}cost(\pi_i)$が最短になるアルゴリズムに絞って調査し、実装する。
+
+## 全探索
+全エージェントの位置を定め、これを$Q\in V^{|A|}$とする。
+
+ある構成$Q = (v_1, \dots, v_i, \dots, v_n)$が与えられた時、$i \neq j$に対して$v'_i \neq v_j$ならエージェント$i$は衝突なしに$v'_i$に移動することができ、別の構成$Q' = (v_1, \dots, v'_i, \dots, v_n)$が生まれる。
+
+このように、グラフ$G$の最大次数を$\Delta$とすると、１つの構成から$O((\Delta + 1)^{|A|})$個の遷移可能な構成が存在する。
+
+遷移可能な構成(branching factor)をA*で全探索し、$\max_{i\in A}cost(\pi_i)$が最小となる経路を求める。
+
+ただ、実用上はbranching factorが大きすぎてスケーラビリティに難がありすぎる。
+
+## CBS(Conflict Based Search)
+基本
+
+
+## LaCAM*(Lazy Constraint Addition for Multi-Agent Pathfinding)
+最新技術, PIBT使用
+
+
+## Time-Expanded Network Flow
+エージェントに区別がない状況で覚醒
+
+
+
+
 
 
 

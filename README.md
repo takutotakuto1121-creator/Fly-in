@@ -159,7 +159,9 @@ start->node1->node2->goalで、node1->node2へは行かずに、もう一つの�
 コードの基盤は全て手書きで実装しています。
 flake8, mypyエラーの解消にはAIを使用しました。
 ### 参考文献
-aaa
+- [マルチエージェント経路計画の紹介](https://kei18.github.io/note/posts/mapf-tutorial/)
+- [グラフ理論　講義ノート](https://ocw.hokudai.ac.jp/wp-content/uploads/2016/01/GraphTheory-2007-Note-all.pdf)
+
 
 
 
