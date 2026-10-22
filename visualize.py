@@ -11,6 +11,10 @@ class Visualizer:
         self.redefine_coordinates_and_get_unit()
         self.paths = self.redefine_paths(paths)
         self.circle_radius = self.define_circle_radius()
+        self.running = True
+        self.state = "map"
+        self.turn_count = 0
+        self.index = 0
 
     def redefine_coordinates_and_get_unit(self) -> None:
         x_screen, y_screen = self.screen_size
@@ -123,30 +127,118 @@ class Visualizer:
         screen.blit(text1, (0, self.screen_size[1]))
         screen.blit(text2, (0, self.screen_size[1] + font_size))
 
+    def get_map_event(self, event) -> None:
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                self.turn_count = min(self.max_turn, self.turn_count + 1)
+            elif event.key == pygame.K_LEFT:
+                self.turn_count = max(0, self.turn_count - 1)
+            elif event.key == pygame.K_ESCAPE:
+                self.state = "home"
+
+    def draw_home_texts(self, screen, candidates) -> None:
+        center_x = self.screen_size[0] / 2
+        font_size = self.unit_y * 0.9
+        font = pygame.font.Font(None, int(font_size))
+
+        title = font.render("Fly-in", True, "blue")
+        title_rect = title.get_rect(center=(int(center_x), int(font_size / 2)))
+        screen.blit(title, title_rect)
+
+        for index, name in enumerate(candidates):
+            text = font.render(name, True, "black")
+            text_rect = text.get_rect(center=(int(center_x), int(font_size / 2) + font_size * (index + 1)))
+            screen.blit(text, text_rect)
+
+    def draw_selections(self, screen) -> None:
+        font_size = self.unit_y * 0.9
+        pygame.draw.rect(screen, "gray", (0, font_size * (self.index + 1), self.screen_size[0], font_size))
+
+    def draw_home_tab(self, screen) -> None:
+        pygame.draw.rect(screen, "gray", (0, self.screen_size[1], self.tab_size[0], self.tab_size[1]))
+        font_size = self.tab_size[1] / 2
+        font = pygame.font.Font(None, int(font_size))
+        text1 = font.render("<- / -> : Change selection", True, "black")
+        text2 = font.render("Enter: Select the map", True, "black")
+        screen.blit(text1, (0, self.screen_size[1]))
+        screen.blit(text2, (0, self.screen_size[1] + font_size))
+
+    def draw_screen(self, screen) -> None:
+        screen.fill("white")
+
+        if self.state in ("home", "easy", "medium", "hard", "challenger"):
+            if self.state == "home":
+                candidates = ["easy", "medium", "hard", "challenger"]
+            elif self.state == "easy":
+                candidates = ["01_linear_path.txt", "02_simple_fork.txt", "03_basic_capacity.txt"]
+            elif self.state == "medium":
+                candidates = ["01_dead_end_trap.txt", "02_circular_loop.txt", "03_priority_puzzle.txt"]
+            elif self.state == "hard":
+                candidates = ["01_maze_nightmare.txt", "02_capacity_hell.txt", "03_ultimate_challenge.txt"]
+            elif self.state == "challenger":
+                candidates = ["01_the_impossible_dream.txt"] 
+
+            self.draw_selections(screen)
+            self.draw_home_texts(screen, candidates)
+            self.draw_home_tab(screen)
+            
+        elif self.state == "map":
+            screen.fill("white")
+            self.draw_circles(screen)
+            self.draw_drones(screen, self.turn_count)
+            self.draw_tabs(screen)
+            
+        pygame.display.flip()
+
+    def get_home_event(self, event, candidates) -> None:
+        length = len(candidates)
+        if event.type == pygame.KEYDOWN:
+            if event.key in (pygame.K_RIGHT, pygame.K_DOWN):
+                self.index = min(length, self.index + 1)
+            elif event.key in (pygame.K_LEFT, pygame.K_UP):
+                self.index = max(0, self.index - 1)
+            elif event.key == pygame.K_RETURN:
+                self.state = candidates[self.index]
+                self.index = 0
+            elif event.key == pygame.K_ESCAPE:
+                if self.state == "home":
+                    return
+                else:
+                    self.state = "home"
+                    self.index = 0
+
+    def get_event(self, event):
+        if event.type == pygame.QUIT:
+            self.running = False
+        
+        if self.state in ("home", "easy", "medium", "hard", "challenger"):
+            if self.state == "home":
+                candidates = ["easy", "medium", "hard", "challenger"]
+            elif self.state == "easy":
+                candidates = ["01_linear_path.txt", "02_simple_fork.txt", "03_basic_capacity.txt"]
+            elif self.state == "medium":
+                candidates = ["01_dead_end_trap.txt", "02_circular_loop.txt", "03_priority_puzzle.txt"]
+            elif self.state == "hard":
+                candidates = ["01_maze_nightmare.txt", "02_capacity_hell.txt", "03_ultimate_challenge.txt"]
+            elif self.state == "challenger":
+                candidates = ["01_the_impossible_dream.txt"] 
+            self.get_home_event(event, candidates)
+
+        if self.state == "map":
+            self.get_map_event(event)
+
     def visualize(self) -> None:
         pygame.init()
         size = (self.screen_size[0], self.screen_size[1] + self.tab_size[1])
         screen = pygame.display.set_mode(size)
         pygame.display.set_caption("Fly-in")
         clock = pygame.time.Clock()
-        turn_count = 0
-        running = True
 
-        while running:
+        while self.running:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RIGHT:
-                        turn_count = min(self.max_turn, turn_count + 1)
-                    elif event.key == pygame.K_LEFT:
-                        turn_count = max(0, turn_count - 1)
+                self.get_event(event)
 
-            screen.fill("white")
-            self.draw_circles(screen)
-            self.draw_drones(screen, turn_count)
-            self.draw_tabs(screen)
-            pygame.display.flip()
+            self.draw_screen(screen)
             clock.tick(60)
 
         pygame.quit()
