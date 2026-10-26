@@ -3,4 +3,6 @@ from src.mapf import Edge, MAPF
 from src.visualize import Visualizer
 
 
-__all__ = ["Map", "Parser", "Zone", "Edge", "MAPF"]
+__all__ = [
+    "Map", "Parser", "Zone", "Connection", "Edge", "MAPF", "Visualizer"
+]

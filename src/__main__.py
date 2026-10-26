@@ -2,7 +2,8 @@ from src import Visualizer
 from src import Parser, MAPF
 import sys
 
-def main():
+
+def main() -> None:
     if len(sys.argv) != 3:
         visualizer = Visualizer()
         visualizer.visualize()
@@ -16,4 +17,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -1,23 +1,26 @@
 import math
-from typing import Optional
 from collections import deque
-from src import Map, Zone, Connection
-from pydantic import BaseModel, model_validator
+from src import Map, Zone
+
+Node = tuple[str, str, int]
+
 
 class Edge:
-    def __init__(self, to_node: tuple[str, str, int], cap: int, is_forward: bool):
-        self.to: tuple[str, str, int] = to_node
-        self.cap: int = cap
-        self.rev: Optional[Edge] = None
+    def __init__(self, to_node: Node, cap: float, is_forward: bool):
+        self.to: Node = to_node
+        self.cap: float = cap
+        self.rev: Edge
         self.is_forward: bool = is_forward
 
 
 class MAPF:
     def __init__(self, map: Map) -> None:
         self.map = map
-        self.graph: dict[tuple[str, str, int], list[Edge]] = {}
+        self.graph: dict[Node, list[Edge]] = {}
 
-    def add_edge(self, from_node: tuple[str, str, int], to_node: tuple[str, str, int], cap: int) -> None:
+    def add_edge(
+        self, from_node: Node, to_node: Node, cap: float
+    ) -> None:
         if from_node not in self.graph:
             self.graph[from_node] = []
         if to_node not in self.graph:
@@ -32,7 +35,9 @@ class MAPF:
         self.graph[to_node].append(reverse_edge)
 
     def is_zonetype(self, name: str, type: str) -> bool:
-        all_zones: list[Zone] = [self.map.start_hub, self.map.end_hub] + self.map.hubs
+        all_zones: list[Zone] = (
+            [self.map.start_hub, self.map.end_hub] + self.map.hubs
+        )
         for zone in all_zones:
             if zone.name == name:
                 if zone.type == type:
@@ -42,43 +47,79 @@ class MAPF:
         return False
 
     def expand_time(self, t: int) -> None:
-        all_zones: list[Zone] = [self.map.start_hub, self.map.end_hub] + self.map.hubs
+        all_zones: list[Zone] = (
+            [self.map.start_hub, self.map.end_hub] + self.map.hubs
+        )
 
         for zone in all_zones:
-            cap = math.inf if zone.name in (self.map.start_hub.name, self.map.end_hub.name) else zone.max_drones
-            self.add_edge((zone.name, "in", t + 1), (zone.name, "out", t + 1), cap)
-            self.add_edge((zone.name, "out", t), (zone.name, "in", t + 1), cap)
+            hub_names = (self.map.start_hub.name, self.map.end_hub.name)
+            cap = math.inf if zone.name in hub_names else zone.max_drones
+            self.add_edge(
+                (zone.name, "in", t + 1), (zone.name, "out", t + 1), cap
+            )
+            self.add_edge(
+                (zone.name, "out", t), (zone.name, "in", t + 1), cap
+            )
 
         for connection in self.map.connections:
             zone1 = connection.zone1_name
             zone2 = connection.zone2_name
             max_link_capacity = connection.max_link_capacity
 
-            if self.is_zonetype(zone1, "blocked") or self.is_zonetype(zone2, "blocked"):
+            if (
+                self.is_zonetype(zone1, "blocked")
+                or self.is_zonetype(zone2, "blocked")
+            ):
                 continue
 
             if self.is_zonetype(zone2, "restricted"):
                 dummy = f"{zone1}-{zone2}"
-                self.add_edge((zone1, "out", t), (dummy, "in", t + 1), max_link_capacity)
-                self.add_edge((dummy, "in", t + 1), (dummy, "out", t + 1), max_link_capacity)
+                self.add_edge(
+                    (zone1, "out", t), (dummy, "in", t + 1),
+                    max_link_capacity
+                )
+                self.add_edge(
+                    (dummy, "in", t + 1), (dummy, "out", t + 1),
+                    max_link_capacity
+                )
                 if t > 0:
-                    self.add_edge((dummy, "out", t), (zone2, "in", t + 1), max_link_capacity)
-  
+                    self.add_edge(
+                        (dummy, "out", t), (zone2, "in", t + 1),
+                        max_link_capacity
+                    )
+
             else:
-                self.add_edge((zone1, "out", t), (zone2, "in", t + 1), max_link_capacity)
+                self.add_edge(
+                    (zone1, "out", t), (zone2, "in", t + 1),
+                    max_link_capacity
+                )
 
             if self.is_zonetype(zone1, "restricted"):
                 dummy = f"{zone2}-{zone1}"
-                self.add_edge((zone2, "out", t), (dummy, "in", t + 1), max_link_capacity)
-                self.add_edge((dummy, "in", t + 1), (dummy, "out", t + 1), max_link_capacity)
+                self.add_edge(
+                    (zone2, "out", t), (dummy, "in", t + 1),
+                    max_link_capacity
+                )
+                self.add_edge(
+                    (dummy, "in", t + 1), (dummy, "out", t + 1),
+                    max_link_capacity
+                )
                 if t > 0:
-                    self.add_edge((dummy, "out", t), (zone1, "in", t + 1), max_link_capacity)
+                    self.add_edge(
+                        (dummy, "out", t), (zone1, "in", t + 1),
+                        max_link_capacity
+                    )
 
             else:
-                self.add_edge((zone2, "out", t), (zone1, "in", t + 1), max_link_capacity)
+                self.add_edge(
+                    (zone2, "out", t), (zone1, "in", t + 1),
+                    max_link_capacity
+                )
 
-    def bfs(self, start_node: tuple[str, str, int], end_node: tuple[str, str, int]) -> dict[tuple[str, str, int], Edge] | None:
-        parent_edge = {}
+    def bfs(
+        self, start_node: Node, end_node: Node
+    ) -> dict[Node, Edge] | None:
+        parent_edge: dict[Node, Edge] = {}
         queue = deque([start_node])
 
         while queue:
@@ -88,13 +129,21 @@ class MAPF:
                 return parent_edge
 
             for edge in self.graph.get(current, []):
-                if edge.cap > 0 and edge.to not in parent_edge and edge.to != start_node:
-                    if self.is_zonetype(edge.to, "priority"):
+                if (
+                    edge.cap > 0
+                    and edge.to not in parent_edge
+                    and edge.to != start_node
+                ):
+                    if self.is_zonetype(edge.to[0], "priority"):
                         parent_edge[edge.to] = edge
                         queue.append(edge.to)
 
             for edge in self.graph.get(current, []):
-                if edge.cap > 0 and edge.to not in parent_edge and edge.to != start_node:
+                if (
+                    edge.cap > 0
+                    and edge.to not in parent_edge
+                    and edge.to != start_node
+                ):
                     parent_edge[edge.to] = edge
                     queue.append(edge.to)
 
@@ -106,7 +155,10 @@ class MAPF:
             current_node = (self.map.start_hub.name, "out", 0)
             drone_path = [self.map.start_hub.name]
 
-            while current_node[0] != self.map.end_hub.name and current_node[2] != t:
+            while (
+                current_node[0] != self.map.end_hub.name
+                and current_node[2] != t
+            ):
                 for edge in self.graph.get(current_node, []):
                     if edge.rev.cap > 0 and edge.is_forward:
 
@@ -123,7 +175,7 @@ class MAPF:
 
         return paths
 
-    def find_path(self):
+    def find_path(self) -> tuple[list[list[str]], int]:
         self.add_edge(
             (self.map.start_hub.name, "in", 0),
             (self.map.start_hub.name, "out", 0),
