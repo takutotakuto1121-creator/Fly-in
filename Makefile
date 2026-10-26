@@ -20,13 +20,13 @@ install: $(VENV)
 	$(PIP) install -r requirements.txt
 
 log: install
-	$(PYTHON) -m src --log $(ARG)
+	$(PYTHON) __main__.py --log $(ARG)
 
 run: install
-	$(PYTHON) -m src
+	$(PYTHON) __main__.py
 
 debug: install
-	$(PYTHON) -m pdb src
+	$(PYTHON) -m pdb __main__.py
 
 clean:
 	rm -rf */__pycache__
@@ -36,9 +36,9 @@ fclean: clean
 	rm -rf $(VENV)
 
 lint: install
-	$(FLAKE8) src
-	$(MYPY) $(FLAGS) src
+	$(FLAKE8) __main__.py mapf.py parse.py visualize.py
+	$(MYPY) $(FLAGS) __main__.py mapf.py parse.py visualize.py
 
 lint-strict: install
-	$(FLAKE8) src
-	$(MYPY) --strict src
+	$(FLAKE8) __main__.py mapf.py parse.py visualize.py
+	$(MYPY) --strict __main__.py mapf.py parse.py visualize.py

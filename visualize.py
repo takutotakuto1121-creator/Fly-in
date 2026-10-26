@@ -1,5 +1,6 @@
 import pygame
-from src import Map, Zone, Parser, Connection, MAPF
+from parse import Map, Zone, Parser, Connection
+from mapf import MAPF
 
 
 class Visualizer:

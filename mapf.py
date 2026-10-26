@@ -1,6 +1,6 @@
 import math
 from collections import deque
-from src import Map, Zone
+from parse import Map, Zone
 
 Node = tuple[str, str, int]
 

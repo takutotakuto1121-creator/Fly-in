@@ -1,5 +1,6 @@
-from src import Visualizer
-from src import Parser, MAPF
+from visualize import Visualizer
+from parse import Parser
+from mapf import MAPF
 import sys
 
 
