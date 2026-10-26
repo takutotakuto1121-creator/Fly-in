@@ -35,6 +35,16 @@ cd Fly-in
 # 実行
 make run
 ```
+
+すると以下のようにウィンドウが立ち上がります。
+
+![image](assets/screen_1.png)
+
+エンターキーでマップを選択していきます。
+選択を終えると、以下のようにマップが立ち上がり、矢印キーで時間を進めたり遅らせたりしてドローンの挙動を確認できます。
+
+![image](assets/screen_2.png)
+
 logのみをターミナルに出力したい場合は以下のコマンドで実行できます。
 ARGを指定しなければデフォルトでは`maps/hard/03_ultimate_challenge.txt`が指定されます。
 ```bash
@@ -155,6 +165,10 @@ start->node1->node2->goalで、node1->node2へは行かずに、もう一つの�
 ### pygameによるビジュアライズ
 pygameでヴィジュアライズしています。
 ループを回して、特定のキーを押すと画面が遷移するように設計しています。
+各座標を画面のサイズに合わせて正規化し、再計算を行なっています。
+これによりmapごとにhubのサイズが変わり、それぞれの盤面に適した大きさのマップに変化します。これがユーザエクスペリエンスを高めます。
+
+
 
 ## Resouces
 ### AIの使用について
@@ -163,6 +177,7 @@ flake8, mypyエラーの解消にはAIを使用しました。
 ### 参考文献
 - [マルチエージェント経路計画の紹介](https://kei18.github.io/note/posts/mapf-tutorial/)
 - [グラフ理論　講義ノート](https://ocw.hokudai.ac.jp/wp-content/uploads/2016/01/GraphTheory-2007-Note-all.pdf)
+- [pygameドキュメント](https://www.pygame.org/docs/)
 
 
 
