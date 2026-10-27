@@ -1,4 +1,5 @@
 import math
+import time
 from collections import deque
 from src import Map, Zone
 
@@ -14,8 +15,9 @@ class Edge:
 
 
 class MAPF:
-    def __init__(self, map: Map) -> None:
+    def __init__(self, map: Map, timeout: float = 10.0) -> None:
         self.map = map
+        self.timeout = timeout
         self.graph: dict[Node, list[Edge]] = {}
 
     def add_edge(
@@ -185,8 +187,14 @@ class MAPF:
         t = 0
         total_flow = 0
         parents_list = []
+        deadline = time.monotonic() + self.timeout
 
         while total_flow < self.map.nb_drones:
+            if time.monotonic() > deadline:
+                raise TimeoutError(
+                    f"No path to the goal found within {self.timeout}s "
+                    f"(the goal may be unreachable)"
+                )
             self.expand_time(t)
             t += 1
 

@@ -41,7 +41,7 @@ class Connection(BaseModel):
 
 
 class Map(BaseModel):
-    nb_drones: int
+    nb_drones: int = Field(ge=1)
     start_hub: Zone
     end_hub: Zone
     hubs: list[Zone]
