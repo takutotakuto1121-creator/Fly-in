@@ -19,4 +19,4 @@ if __name__ == "__main__":
     try:
         main()
     except BaseException as e:
-        print("[Error]{e}")
+        print(f"[Error]{e}")
