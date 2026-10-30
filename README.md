@@ -1,8 +1,9 @@
 # Fly-in
 ## Description
-*Fly-in*は、42cursusのMilestone3のソロ課題です。スタートから同時に複数のドローンを出発させ、効率よく全てのドローンがゴールまで辿り着く経路を探す課題です。マルチエージェントでの経路探索、最大流問題などについて学べます。
-### マップの形式
-以下のような形式でmap情報が与えられます。
+*Fly-in* is a solo project for Milestone 3 of the 42 cursus. The goal is to launch multiple drones from the start at the same time and find routes that get all of them to the goal efficiently. Through it you learn about multi-agent pathfinding, maximum flow problems, and more.
+
+### Map format
+The map information is given in the following format.
 
 ```
 nb_drones: 5
@@ -12,52 +13,52 @@ hub: node 5 5[zone=restricted color=red]
 connection: start-node [max_link_capacity=2]
 connection: node-goal
 ```
-ルールは以下の通りです。
-1. 最初のラインは`nb_drones`: ドローンの数を指定しなければなりません。
-2. `start_hub`, `end_hub`, `hub: name x y [metadata]でhub(ノード)の情報を指定します。
-3. hubのmetadataは以下のルールに沿っています。  
-zone=type(default: normal): typeが`normal`なら、スタンダードなhubで、移動には1ターンかかる。`blocked`なら、そのzoneへは侵入禁止。`restricted`なら、移動には2ターンかかる。`priority`なら、移動には1ターンかかり、優先的に経由しなけらばならない。　　
-color=value(default: none): hubの色.  
-max_drones=number(degfault: 1): hubに同時に留まれるドローンの最大数
-3. `connection`: name1-name2 [metadatta]でname1とname2のハブのつながりを表す
-4. connectionのmeatadataにつて、以下のルールがある。   
-max_link_capacity=number(default: 1): そのエッジ同時に通過できるドローンの最大数。
+The rules are as follows.
+1. The first line must be `nb_drones`, which specifies the number of drones.
+2. `start_hub`, `end_hub`, and `hub: name x y [metadata]` specify the hubs (nodes).
+3. The hub metadata follows these rules:  
+zone=type (default: normal): if the type is `normal`, the hub is a standard hub and moving to it takes 1 turn. If `blocked`, entering that zone is forbidden. If `restricted`, moving to it takes 2 turns. If `priority`, moving to it takes 1 turn and it should be routed through preferentially.  
+color=value (default: none): the color of the hub.  
+max_drones=number (default: 1): the maximum number of drones that can stay in the hub at the same time.
+4. `connection: name1-name2 [metadata]` represents a link between the hubs name1 and name2.
+5. The connection metadata follows this rule:  
+max_link_capacity=number (default: 1): the maximum number of drones that can pass through that edge at the same time.
 
 ## Instruction
-以下の手順で実行してください。
+Follow the steps below to run the project.
 ```bash
-# リポジトリからのクローン
+# Clone from the repository
 git clone https://github.com/takutotakuto1121-creator/Fly-in.git Fly-in
 
-# リポジトリへの移動
+# Move into the repository
 cd Fly-in
 
-# 実行
+# Run
 make run
 ```
 
-すると以下のようにウィンドウが立ち上がります。
+A window will then open as shown below.
 
 ![image](assets/screen_1.png)
 
-エンターキーでマップを選択していきます。
-選択を終えると、以下のようにマップが立ち上がり、矢印キーで時間を進めたり遅らせたりしてドローンの挙動を確認できます。
+Select a map with the Enter key.
+Once you have made your selection, the map opens as shown below, and you can advance or rewind time with the arrow keys to check the drones' behavior.
 
 ![image](assets/screen_2.png)
 
-logのみをターミナルに出力したい場合は以下のコマンドで実行できます。
-ARGを指定しなければデフォルトでは`maps/hard/03_ultimate_challenge.txt`が指定されます。
+If you only want to print the log to the terminal, you can run the following command.
+If ARG is not specified, `maps/hard/03_ultimate_challenge.txt` is used by default.
 ```bash
-make log ARG=[mapのパス]
+make log ARG=[path to map]
 ```
 
 ## Algorithm
-### Parseについて
-mapの情報が記述されたテキストファイルをパースします。
-pydanticを用いてバリデーションしながらパースしていますが、メインは経路探索とビジュアライズなので割愛します。コードを見ればすぐにわかります。
+### Parsing
+The text file that describes the map is parsed.
+Parsing is done with validation using pydantic, but since the main focus is pathfinding and visualization, I omit the details here. You can understand it quickly by reading the code.
 
 ### Time-expanded Network Flow
-最大流に時空間の概念を取り入れて実装しています。最大流問題とは、グラフが与えられ、そこに流すことのできる水の最大量を求める問題です。解説は[こちらのサイト]()に任せます。また、経路探索には[DFS]()を用いています。具体例を用いて解説します。例えば、以下のようなmapが与えられたとします。(maps/medium/03_priority_puzzle.txtのマップ)
+The implementation incorporates the concept of space-time into maximum flow. The maximum flow problem is: given a graph, find the maximum amount of water that can be sent through it. I leave the explanation to [this site](). For pathfinding, [DFS]() is used. Let me explain with a concrete example. Suppose the following map is given (the map from maps/medium/03_priority_puzzle.txt).
 ```
 # Medium Level 3: Priority zones create optimal path challenges
 nb_drones: 5
@@ -79,53 +80,53 @@ connection: fast_path-merge_point
 connection: merge_point-goal [max_link_capacity=2]
 
 ```
-このグラフを可視化すると以下のようになります。少し太いエッジ(merge_point -> goal)のみ、ドローンが同時に2機通過可能です。また、通常エッジを通ってノードからノードに移動するのには1ターンしかかかりませんが、restrictedのslow_path1, slow_path2に行くには、2ターンかかります。今回はありませんが、blockedのノードが存在する場合は、この時点でノードを生成せず、存在を抹消しておきます。
+Visualizing this graph gives the following. Only the slightly thicker edge (merge_point -> goal) allows 2 drones to pass at the same time. Also, moving from node to node along a normal edge takes only 1 turn, but moving to the restricted nodes slow_path1 and slow_path2 takes 2 turns. There are none in this example, but if a blocked node exists, it is erased at this point by not generating the node at all.
 
 ![image](assets/graph_1.png)
 
-まず、各ノードに対して同時に存在可能なドローン数を考慮しながらプログラムをすると非常に複雑になっってしまうので、各ノードをinとoutのノードに分割します。inとoutを結ぶエッジの同時に通行可能なドローン数には、十分に大きい数を割り当てておきます。これにより、考慮すべき条件が一つ減りました。グラフは以下です。
+First, writing the program while taking into account the number of drones that can exist at each node at the same time would be very complicated, so each node is split into an in node and an out node. The edge connecting in and out is given a sufficiently large capacity. This removes one condition that we have to consider. The graph is as follows.
 
 ![image](assets/graph_2.png)
 
-もう一つ条件を減らします。restrictedのslow_path1, slow_path2に移動する際は間にダミーのノードを挟んで、ダミーノード間の同時に移動可能なドローン数とノードに同時に存在可能なドローン数を対応させます。今回はshow_path1, show_path2ともに1なので、1にしておきます。以上、全てのノードは同等に扱え、考慮するのはエッジの通行可能ドローン数のみになります。条件がスッキリしました。グラフは以下です。
+Let's remove one more condition. When moving to the restricted nodes slow_path1 and slow_path2, a dummy node is inserted in between, and the number of drones that can move between the dummy nodes is made to match the number of drones that can exist at the node at the same time. Here, both slow_path1 and slow_path2 have 1, so we set it to 1. As a result, all nodes can be treated equally, and the only thing to consider is the edge capacity. The conditions are now clean. The graph is as follows.
 
 ![image](assets/graph_3.png)
 
-このグラフにおいて、複数ドローンをstart_inから出発させ、全てのドローンがgoal_outに最短手数でたどり着けるようなアルゴリズムを組んでいきます。
-まずは時間t(tは0以上の整数)で各時間のグラフを考えましょう。tがひとつ増える毎にターンは1だけ増えます。
-初期状態では、エッジは無しにして、ノードのみが存在する状態にします。
-t=0では、start_in -> start_goalのエッジのみを作成します。
-t=1では、各ノード(dummyノードを除く)のin -> outのエッジのみを作成します。
-以下のようなグラフになります。
-ついでにt=0の状態でDFSを行す。当然goalに辿り着く経路は存在しませんね。
+On this graph, we will build an algorithm that launches multiple drones from start_in and gets all of them to goal_out in the fewest turns.
+First, consider a graph for each time t (t is an integer greater than or equal to 0). Each time t increases by one, one turn passes.
+In the initial state, there are no edges, only nodes.
+At t=0, only the edge start_in -> start_out is created.
+At t=1, only the in -> out edges of each node (excluding dummy nodes) are created.
+The graph looks like the following.
+Let's also run DFS in the state of t=0. Naturally, there is no path that reaches the goal.
 
 ![image](assets/graph_4.png)
 
-この時点では、t=0とt=1のグラフ異なる時空間に存在します。各グラフは独立していて、交わることはありません。
-経路探索の方法について、エージェント(今回はドローン)が一体のみだと、適当にBFS,ダイクストラでもやっておけば最短経路は求まりますが、今回はマルチエージェント(ドローンが複数)なので、普通に経路探索をしていては、求めることが非常に困難になります。
-これを解決するために、異なる時空間同士を結合させる手法で実装しました。以下のグラフは2次元ですが、3次元でt=0,t=1が縦に並んでいるような想像をするとわかりやすいかもしれません。
-t=0からt=1へ移動することは、ターンが１ターン進行するということです。そのため、t=0からt=1に進むタイミングでノード間の移動ができるようにしています。
-ドローンが1ターン進む毎にする行動には、待機と移動が存在します。
-待機について、t=0でのstart_out(以下start_out(t=0)の表に表現)とstart_in(t=1)をエッジで繋ぎます。同様に各ノードのin(t=0) -> out(t=1)のエッジを作成します。これはターンの経過でドローンが移動せずにそのノードに留まる待機と同じ操作になります。
-移動について、まずは通常のノード同士のエッジを考えます。例えばfast_junction->fast_pathを参照してください。fast_junction_out(t=0) -> fast_path_in(t=1), fast_path_out(t=0) -> fast_junction(t=1)のエッジを作成します。これにより1ターンでの双方向での移動が可能になります。
-次に移動先がrestrictedのノードの場合を考えます。例えばstart->slow_path1を参照してください。start_out(t=0) -> dummy1_in(t=1), dummy1_in(t=1) -> dummy1_out(t=1), slow/path(t=0) -> satrt_in(t=1)のエッジを作成します。ダミーのーどを間に挟んでいるのがポイントです。なぜこれで1ターン遅れさせれるのかについては後述のt=2まで行った状態の解説を参照してください。
-最後に移動元がrestrictedのノードの場合を考えます。例えばslow_path2 -> merge_pointを参照してください。slow_path2_out(t=0) -> merge_point(t=1), merge_point(t=0) -> dummy3_in(t=1), dummy3_in(t=1) -> dummy3_out(t=1)のエッジを作成します。同様にダミーのーどを挟んでいるのがポイントです。
-このt=0, t=1を繋げた空間で、スタートをstart_in(t=0),　ゴールをgoal_out(t=1)として、DFSを行いましょう。まだ経路は見つかりません。
+At this point, the graphs of t=0 and t=1 exist in different space-times. Each graph is independent and they never intersect.
+Regarding pathfinding, if there is only one agent (a drone, in this case), the shortest path can be found by simply using BFS or Dijkstra. However, this is multi-agent (multiple drones), so doing ordinary pathfinding makes it extremely difficult to find the solution.
+To solve this, I implemented a method that joins the different space-times together. The graph below is 2D, but it may help to imagine t=0 and t=1 stacked vertically in 3D.
+Moving from t=0 to t=1 means that one turn passes. Therefore, movement between nodes is made possible at the moment of going from t=0 to t=1.
+The actions a drone can take each turn are waiting and moving.
+For waiting, start_out(t=0) (written below as the table for start_out(t=0)) and start_in(t=1) are connected by an edge. Similarly, an edge in(t=0) -> out(t=1) is created for each node. This is equivalent to the drone staying at that node without moving as the turn passes.
+For moving, first consider edges between normal nodes. For example, look at fast_junction->fast_path. The edges fast_junction_out(t=0) -> fast_path_in(t=1) and fast_path_out(t=0) -> fast_junction_in(t=1) are created. This enables bidirectional movement in one turn.
+Next, consider the case where the destination is a restricted node. For example, look at start->slow_path1. The edges start_out(t=0) -> dummy1_in(t=1), dummy1_in(t=1) -> dummy1_out(t=1), and slow_path1(t=0) -> start_in(t=1) are created. The key point is that a dummy node is inserted in between. For why this delays the drone by one turn, see the explanation of the state up to t=2 below.
+Finally, consider the case where the source is a restricted node. For example, look at slow_path2 -> merge_point. The edges slow_path2_out(t=0) -> merge_point(t=1), merge_point(t=0) -> dummy3_in(t=1), and dummy3_in(t=1) -> dummy3_out(t=1) are created. Again, the key point is that a dummy node is inserted in between.
+In this space joining t=0 and t=1, with start_in(t=0) as the start and goal_out(t=1) as the goal, let's run DFS. No path is found yet.
 
 ![image](assets/graph_5.png)
 
-あとは以上の操作を繰り返していくだけです。
-以降で一点だけ異なるのが、restrictedのノードが関係する部分のエッジ作成において、今回だとdummy_1_out(t=1) -> slow_path1_in(t=2)などのダミーノードとrestrictedのノードを繋ぐエッジが追加されている点です。ここまでいって初めてrestrictedのノードへの移動が可能になります。以上の操作によってrestrictedのノードに2ターンかけて移動できるようになっています。
-t=0,1,2を繋げた空間でまたBFSを行います。今回のスタートはstart_in(t=0)で、ゴールはgoal_end(t=2)です。まだ経路は見つかりません。
+After that, you just repeat the above operations.
+The only difference from here on is that, when creating the edges related to restricted nodes, edges connecting a dummy node and the restricted node, such as dummy_1_out(t=1) -> slow_path1_in(t=2), are added. Only at this point does moving to the restricted node become possible. With these operations, moving to a restricted node takes 2 turns.
+BFS is run again on the space joining t=0, 1, and 2. This time the start is start_in(t=0) and the goal is goal_out(t=2). No path is found yet.
 
 ![image](assets/graph_6.png)
 
-この操作を繰り返すことによって、少しずつ空間を拡張していきながら、ターン毎の移動を実現し、経路を探索していきます。t=tの時、スタートはstart_in(t=0), ゴールはgoal_end(t=t)になります。
+By repeating this operation, the space is expanded little by little, movement per turn is realized, and the path is searched. At time t, the start is start_in(t=0) and the goal is goal_out(t=t).
 
-## DFSによるマルチエージェントの経路探索
-繰り返すといずれDFSによって経路が見つかるようになります。ただここまでだとエージェント(ドローン)数が1です。では、マルチエージェント(エージェント数が2以上)で経路を探索する方法について考えていきます。
-マップについて改めて考えましょう。一番最初のノードのin, outへの分割、restrictedのノードへの移動の際にダミーのーどを挟む操作により、考慮すべきデータははノード、エッジ、各エッジの一度に通行可能なドローンの最大数の3点になりました。
-各エッジの一度に通行可能なドローンの最大数に着目します。`mapf.py`では、以下のようにEdgeクラスを定義しています。
+## Multi-agent pathfinding with DFS
+If you repeat this, DFS will eventually find a path. However, so far there is only one agent (drone). Let's now think about how to search for paths for multiple agents (two or more).
+Let's think about the map again. Thanks to splitting each node into in and out at the very beginning and inserting dummy nodes when moving to restricted nodes, the data to consider has been reduced to three things: nodes, edges, and the maximum number of drones that can pass each edge at the same time.
+Focus on the maximum number of drones that can pass each edge at one time. In `mapf.py`, the Edge class is defined as follows.
 ```python
 class Edge:
     def __init__(self, to_node: tuple[str, str, int], cap: int, is_forward: bool):
@@ -134,68 +135,47 @@ class Edge:
         self.rev: Optional[Edge] = None
         self.is_forward: bool = is_forward
 ```
-各エッジには、to: エッジの差すノード、cap: エッジを一度に通行可能なドローンの最大数、rev: 反対むきのEdge(キャンセルルート), is_forward: このエッジは順方向のエッジかどうか（キャンセルルートではないか）の情報が含まれています。
-capが重要です。ターンの遷移(tの遷移)時に、DFSの探索中にドローンが待機ではなく移動した時のことを考えます。エッジを使って移動しますが、まず一度DFSを行い最短経路を見つけると、使ったエッジのcapを-1して、revのcapを+1していきます。次にどの状態でもう一度DFSを行うということを繰り返していきます。これを経路が発見できなくなるまで繰り返し、発見した経路数がドローンの数以上になれば終了します。
-revのcapを+1するということは、1つのドローンがスタートからゴールまでの経路を見つけると、そのルートの真逆の経路をエッジを利用して追加するということです。
-原点に立ち返ると、最大流問題を応用して解くという方針でした。最大流問題では、流せるだけ水を流します。ただ、以下のグラフを考えます。
+Each edge holds: to: the node the edge points to, cap: the maximum number of drones that can pass the edge at one time, rev: the Edge in the opposite direction (the cancel route), and is_forward: whether this edge is a forward edge (i.e. not a cancel route).
+The cap is what matters. Consider the case where, at a turn transition (a transition of t), a drone moves instead of waiting during the DFS search. It moves using an edge, but first, once DFS finds a shortest path, the cap of each used edge is decreased by 1 and the cap of its rev is increased by 1. Then DFS is run again in that state, and this is repeated. This is repeated until no more paths can be found, and if the number of paths found is greater than or equal to the number of drones, the search ends.
+Increasing the cap of rev by 1 means that when one drone finds a path from the start to the goal, the exact reverse of that route is added using the edges.
+Going back to the origin, the plan was to solve this by applying the maximum flow problem. In a maximum flow problem, you send as much water as you can. Now consider the following graph.
 
 ![image](assets/graph_7.png)
 
-このグラフのstartからgoalに最大限水を流すと、node1 - node2のエッジで水が衝突し、流れなくなります。そのため、水が流れる経路はstart->node1->goal, start->node2->goalの2通りになるはずですが、探索すると、例えば１回目の探索でstart->node1->node2->goalの経路を見つけてきたとします。すると、start->node1, node1->node2, node2->goalのcapを1から0に変更し、普通にもう一度探索を行うと、経路は見つかりません。これは、水の衝突を考慮してないからです。
+If you send as much water as possible from start to goal in this graph, the water collides at the node1 - node2 edge and stops flowing. So there should be two routes for the water: start->node1->goal and start->node2->goal. However, suppose that the first search finds the route start->node1->node2->goal. Then the cap of start->node1, node1->node2, and node2->goal is changed from 1 to 0, and if you simply search again, no path is found. This is because water collisions are not taken into account.
 
-先ほど見つけてきたルートの逆ルート(キャンセルルート)を作成してからもう一度探索を行うことにします。goal->node2->node1->startのキャンセルートを追加し、探索を行うと、start->node2->node1->goalの経路を発見できます。
-以上のようにキャンセルルートを作成しておくと、経路がしっかりと2つ見つかりました。
-見つけてきた2つの経路は
-start->node1->node2->goal, 
-goal->node2->node1->start
-の２つです。
-正解の経路は
-start->node1->goal, 
-start->node2->goal
-です。比較してください。すると見つけてきた経路では、node1-node2のエッジで衝突しているものの、すれ違ってそのまま探索をしています。
-この挙動をうまく修正すれば正解のルートが得られそうですね。
+So we create the reverse route of the one just found (the cancel route) and then search again. If we add the cancel route goal->node2->node1->start and search, we can find the path start->node2->node1->goal.
+By creating cancel routes like this, two paths were found properly.
+The two paths found are
+start->node1->node2->goal,
+start->node2->node1->goal
+(together with the cancel route goal->node2->node1->start).
+The correct paths are
+start->node1->goal,
+start->node2->goal.
+Compare them. In the paths we found, the flows collide at the node1-node2 edge, yet they pass each other and the search continues as is.
+If we fix this behavior properly, we should be able to get the correct routes.
 
-本来なら水が衝突してnode-node2は通れないはずです。見つけてきたルートは衝突していません。ただ、衝突時に水を交換するような操作をすると、衝突と同じ挙動を再現できます。
-start->node1->node2->goalで、node1->node2へは行かずに、もう一つのキャンセルルートを使用した経路start->node2->node1->goalのnode2->node1へ行った水と交換します。
-すると、経路はstart->node1->goal, start->node2->goalの2２通りになり、正解の経路と一致しました。
-以上のようにキャンセルルートを作成する操作をDFSに追加し、DFSを繰り返すことにより、マルチエージェントに対応した複数形をを見つけてくることができます。
+Originally, water colliding means node1-node2 cannot be passed. The routes we found do not collide. However, if we perform an operation that exchanges the water upon collision, we can reproduce the same behavior as a collision.
+In start->node1->node2->goal, instead of going node1->node2, we exchange it with the water that went node2->node1 in the other path start->node2->node1->goal, which used the cancel route.
+Then the paths become start->node1->goal and start->node2->goal, matching the correct paths.
+As above, by adding the operation of creating cancel routes to DFS and repeating DFS, we can find the set of paths that supports multiple agents.
 
-ちなみに、ターンが最小であればよく、各エージェントの経路は最短でなくてもよく、経路があればそれを見つけてくればいいだけなので、BFSでもダイクストラでもA*でも、どんなアルゴリズムを用いて経路探索をしても構いません。
+Incidentally, the number of turns only needs to be minimal, and each agent's path does not have to be the shortest. We only need to find a path if one exists, so any pathfinding algorithm, whether BFS, Dijkstra, or A*, can be used.
 
-### pygameによるビジュアライズ
-pygameでヴィジュアライズしています。
-ループを回して、特定のキーを押すと画面が遷移するように設計しています。
-各座標を画面のサイズに合わせて正規化し、再計算を行なっています。
-これによりmapごとにhubのサイズが変わり、それぞれの盤面に適した大きさのマップに変化します。これがユーザエクスペリエンスを高めます。
-
-
-
-## Resouces
-### AIの使用について
-コードの基盤は全て手書きで実装しています。
-flake8, mypyエラーの解消にはAIを使用しました。
-### 参考文献
-- [マルチエージェント経路計画の紹介](https://kei18.github.io/note/posts/mapf-tutorial/)
-- [グラフ理論　講義ノート](https://ocw.hokudai.ac.jp/wp-content/uploads/2016/01/GraphTheory-2007-Note-all.pdf)
-- [pygameドキュメント](https://www.pygame.org/docs/)
+### Visualization with pygame
+The visualization is done with pygame.
+It is designed as a loop in which pressing specific keys switches the screen.
+Each coordinate is normalized to fit the screen size and recalculated.
+As a result, the size of the hubs changes for each map and the map is scaled to suit each board. This improves the user experience.
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## Resources
+### Use of AI
+The foundation of the code was entirely hand-written.
+AI was used to resolve flake8 and mypy errors.
+### References
+- [Introduction to Multi-Agent Path Finding](https://kei18.github.io/note/posts/mapf-tutorial/)
+- [Graph Theory Lecture Notes](https://ocw.hokudai.ac.jp/wp-content/uploads/2016/01/GraphTheory-2007-Note-all.pdf)
+- [pygame documentation](https://www.pygame.org/docs/)
